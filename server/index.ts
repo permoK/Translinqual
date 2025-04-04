@@ -12,13 +12,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
+  res.json = function (bodyJson: any, ...args: any[]) {
     capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
@@ -58,13 +58,13 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV !== "production") {
     await setupVite(app, server);
   } else {
-    // In production, serve static files from the client/dist directory
-    const distPath = path.resolve(__dirname, "..", "client", "dist");
-    app.use(express.static(distPath));
+    // In production, serve static files from the dist/public directory
+    const publicPath = path.resolve(__dirname, "..", "dist", "public");
+    app.use(express.static(publicPath));
     
     // Serve index.html for all routes that don't match a file
-    app.get("*", (req, res) => {
-      res.sendFile(path.resolve(distPath, "index.html"));
+    app.get("*", (_req: Request, res: Response) => {
+      res.sendFile(path.resolve(publicPath, "index.html"));
     });
   }
 
