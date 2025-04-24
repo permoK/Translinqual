@@ -37,7 +37,7 @@ const upload = multer({
       'image/png',
       'text/plain'
     ];
-    
+
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -49,25 +49,25 @@ const upload = multer({
 export function setupChatRoutes(app: Express, server: Server) {
   // Create WebSocket server
   const wss = new WebSocketServer({ server, path: "/ws" });
-  
+
   // WebSocket connection handler
   wss.on("connection", (ws) => {
     console.log("New WebSocket connection established");
-    
+
     ws.on("message", async (message) => {
       try {
         const data = JSON.parse(message.toString());
-        
+
         if (data.type === "message") {
           // Handle chat message
           const { conversationId, content, userId, language } = data;
-          
+
           // Let the client know we're processing
           ws.send(JSON.stringify({
             type: "typing",
             conversationId
           }));
-          
+
           // Store user message
           const userMessage = await storage.createMessage({
             conversationId,
@@ -77,16 +77,16 @@ export function setupChatRoutes(app: Express, server: Server) {
             fileUrl: null,
             audioUrl: null
           });
-          
+
           // Send message back to confirm receipt
           ws.send(JSON.stringify({
             type: "message",
             message: userMessage
           }));
-          
+
           // Generate AI response
           const aiResponse = await sendAiResponse(content, language);
-          
+
           // Get translation if needed (for non-English responses)
           let translation = null;
           if (language !== "eng") {
@@ -95,13 +95,10 @@ export function setupChatRoutes(app: Express, server: Server) {
               // This is a simplistic check; a real implementation would use language detection
               if (aiResponse.length > 50) { // Assuming longer responses have both languages
                 // Try to extract the translated part using a pattern
-                const languageName = 
-                  language === "mas" ? "Maasai" :
-                  language === "swa" ? "Kiswahili" :
-                  language === "kik" ? "Kikuyu" : null;
-                
+                const languageName = language === "luo" ? "Dholuo" : null;
+
                 if (languageName) {
-                  // This is just a simple approach - in a production app, you'd want 
+                  // This is just a simple approach - in a production app, you'd want
                   // more sophisticated parsing or have the AI return structured data
                   translation = await translateText(aiResponse, languageName, "English");
                 }
@@ -111,23 +108,20 @@ export function setupChatRoutes(app: Express, server: Server) {
               // Continue without translation if it fails
             }
           }
-          
+
           // Get linguistic insights
           let insights = null;
           try {
             if (language !== "eng") {
-              const languageName = 
-                language === "mas" ? "Maasai" :
-                language === "swa" ? "Kiswahili" :
-                language === "kik" ? "Kikuyu" : "English";
-              
+              const languageName = language === "luo" ? "Dholuo" : "English";
+
               insights = await getLinguisticInsights(aiResponse, languageName);
             }
           } catch (insightsError) {
             console.error("Insights error:", insightsError);
             // Continue without insights if it fails
           }
-          
+
           // Store AI response
           const aiMessage = await storage.createMessage({
             conversationId,
@@ -137,10 +131,10 @@ export function setupChatRoutes(app: Express, server: Server) {
             fileUrl: null,
             audioUrl: null
           });
-          
+
           // Add insights to the message if available
           const messageWithInsights = insights ? { ...aiMessage, insights } : aiMessage;
-          
+
           // Send AI response back to client
           ws.send(JSON.stringify({
             type: "message",
@@ -150,16 +144,20 @@ export function setupChatRoutes(app: Express, server: Server) {
         else if (data.type === "translate") {
           // Handle translation request
           const { text, sourceLanguage, targetLanguage } = data;
-          
+
           // Let the client know we're processing
           ws.send(JSON.stringify({
             type: "typing",
             action: "translating"
           }));
-          
+
+          // Map language names to codes if needed
+          const sourceCode = sourceLanguage === "Dholuo" ? "luo" : sourceLanguage;
+          const targetCode = targetLanguage === "English" ? "eng" : targetLanguage;
+
           // Perform translation
-          const translatedText = await translateText(text, sourceLanguage, targetLanguage);
-          
+          const translatedText = await translateText(text, sourceCode, targetCode);
+
           // Send translation back to client
           ws.send(JSON.stringify({
             type: "translation",
@@ -172,16 +170,16 @@ export function setupChatRoutes(app: Express, server: Server) {
         else if (data.type === "insights") {
           // Handle linguistic insights request
           const { text, language } = data;
-          
+
           // Let the client know we're processing
           ws.send(JSON.stringify({
             type: "typing",
             action: "analyzing"
           }));
-          
+
           // Get linguistic insights
           const insights = await getLinguisticInsights(text, language);
-          
+
           // Send insights back to client
           ws.send(JSON.stringify({
             type: "insights",
@@ -197,7 +195,7 @@ export function setupChatRoutes(app: Express, server: Server) {
         }));
       }
     });
-    
+
     ws.on("close", () => {
       console.log("WebSocket connection closed");
     });
@@ -206,7 +204,7 @@ export function setupChatRoutes(app: Express, server: Server) {
   // API Endpoints for conversations
   app.get("/api/conversations", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const conversations = await storage.getConversationsByUserId(req.user.id);
       res.json(conversations);
@@ -217,20 +215,20 @@ export function setupChatRoutes(app: Express, server: Server) {
 
   app.post("/api/conversations", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const { title, language } = req.body;
-      
+
       if (!title || !language) {
         return res.status(400).json({ message: "Title and language are required" });
       }
-      
+
       const conversation = await storage.createConversation({
         userId: req.user.id,
         title,
         language
       });
-      
+
       res.status(201).json(conversation);
     } catch (error) {
       res.status(500).json({ message: "Failed to create conversation", error: error.message });
@@ -239,21 +237,21 @@ export function setupChatRoutes(app: Express, server: Server) {
 
   app.get("/api/conversations/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const conversationId = parseInt(req.params.id);
       const conversation = await storage.getConversation(conversationId);
-      
+
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
-      
+
       if (conversation.userId !== req.user.id) {
         return res.status(403).json({ message: "Forbidden" });
       }
-      
+
       const messages = await storage.getMessagesByConversationId(conversationId);
-      
+
       res.json({
         conversation,
         messages
@@ -265,19 +263,19 @@ export function setupChatRoutes(app: Express, server: Server) {
 
   app.delete("/api/conversations/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const conversationId = parseInt(req.params.id);
       const conversation = await storage.getConversation(conversationId);
-      
+
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
-      
+
       if (conversation.userId !== req.user.id) {
         return res.status(403).json({ message: "Forbidden" });
       }
-      
+
       await storage.deleteConversation(conversationId);
       res.status(204).send();
     } catch (error) {
@@ -287,26 +285,26 @@ export function setupChatRoutes(app: Express, server: Server) {
 
   app.put("/api/conversations/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const conversationId = parseInt(req.params.id);
       const { title, language } = req.body;
-      
+
       const conversation = await storage.getConversation(conversationId);
-      
+
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
-      
+
       if (conversation.userId !== req.user.id) {
         return res.status(403).json({ message: "Forbidden" });
       }
-      
+
       const updatedConversation = await storage.updateConversation(conversationId, {
         title,
         language
       });
-      
+
       res.json(updatedConversation);
     } catch (error) {
       res.status(500).json({ message: "Failed to update conversation", error: error.message });
@@ -316,14 +314,14 @@ export function setupChatRoutes(app: Express, server: Server) {
   // File upload endpoint
   app.post("/api/upload", upload.single("file"), async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const fileUrl = `/uploads/${req.file.filename}`;
-      
+
       res.status(201).json({
         fileUrl,
         filename: req.file.originalname,
@@ -353,14 +351,14 @@ export function setupChatRoutes(app: Express, server: Server) {
   // Translation API
   app.post("/api/translate", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const { text, sourceLanguage, targetLanguage } = req.body;
-      
+
       if (!text || !sourceLanguage || !targetLanguage) {
         return res.status(400).json({ message: "Text, sourceLanguage, and targetLanguage are required" });
       }
-      
+
       const translatedText = await translateText(text, sourceLanguage, targetLanguage);
       res.json({ originalText: text, translatedText });
     } catch (error) {
@@ -371,14 +369,14 @@ export function setupChatRoutes(app: Express, server: Server) {
   // Linguistic Insights API
   app.post("/api/linguistic-insights", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    
+
     try {
       const { text, language } = req.body;
-      
+
       if (!text || !language) {
         return res.status(400).json({ message: "Text and language are required" });
       }
-      
+
       const insights = await getLinguisticInsights(text, language);
       res.json({ text, insights });
     } catch (error) {

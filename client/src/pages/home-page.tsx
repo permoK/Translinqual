@@ -37,15 +37,13 @@ export default function HomePage() {
     setIsCreating(true);
     try {
       const title = `${language} Conversation`;
-      const languageCode = language === 'Maasai' ? 'mas' : 
-                            language === 'Kiswahili' ? 'swa' : 
-                            language === 'Kikuyu' ? 'kik' : 'eng';
-      
+      const languageCode = language === 'Luo' ? 'luo' : 'eng';
+
       const newConversation = await createConversation({
         title,
         language: languageCode
       });
-      
+
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
       navigate(`/chat/${newConversation.id}`);
     } catch (error) {
@@ -62,7 +60,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
       <Header />
-      
+
       <main className="flex-1">
         {/* Hero Section */}
         <section className="py-12 md:py-24 bg-white dark:bg-gray-900">
@@ -70,17 +68,17 @@ export default function HomePage() {
             <div className="flex flex-col items-center space-y-4 text-center">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
-                  Mzungumzo AI Chat Platform
+                  Translinqual AI Chat Platform
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-                  Experience the power of AI-driven conversations in Kenyan languages including Maasai, Kiswahili, Kikuyu and more
+                  Experience the power of AI-driven conversations in English and Luo
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
                   className="bg-primary text-white"
-                  onClick={() => createNewConversation('Maasai')}
+                  onClick={() => createNewConversation('Luo')}
                   disabled={isCreating}
                 >
                   {isCreating ? (
@@ -91,7 +89,7 @@ export default function HomePage() {
                   ) : (
                     <>
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Start Chatting in Maasai
+                      Start Chatting in Luo
                     </>
                   )}
                 </Button>
@@ -106,7 +104,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        
+
         {/* Features Section */}
         <section className="py-12 md:py-24 bg-gray-50 dark:bg-gray-800" id="features">
           <div className="container px-4 md:px-6 mx-auto">
@@ -118,7 +116,7 @@ export default function HomePage() {
                 Seamlessly communicate and learn Kenyan languages with our advanced tools
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
                 <CardContent className="pt-6">
@@ -135,7 +133,7 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -153,7 +151,7 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -170,7 +168,7 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -186,7 +184,7 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -203,7 +201,7 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center space-y-3">
@@ -223,32 +221,32 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        
+
         {/* Languages Section */}
         <section className="py-12 md:py-24 bg-white dark:bg-gray-900" id="languages">
           <div className="container px-4 md:px-6 mx-auto">
             <div className="text-center mb-10">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                Supported Kenyan Languages
+                Supported Languages
               </h2>
               <p className="mt-4 text-gray-500 dark:text-gray-400">
-                Explore our growing collection of Kenyan languages and start learning today
+                Translate between English and Luo with our advanced AI
               </p>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <Card className="overflow-hidden">
                 <div className="h-2 bg-primary"></div>
                 <CardContent className="pt-6">
                   <div className="flex flex-col space-y-4">
-                    <h3 className="text-xl font-bold">Maasai</h3>
+                    <h3 className="text-xl font-bold">English</h3>
                     <p className="text-gray-500 dark:text-gray-400">
-                      The language of the Maasai people, known for their distinctive customs and dress, spoken in southern Kenya and northern Tanzania.
+                      The global language of business and communication, used as one of Kenya's official languages.
                     </p>
                     <div className="mt-auto pt-4">
-                      <Button 
+                      <Button
                         className="w-full"
-                        onClick={() => createNewConversation('Maasai')}
+                        onClick={() => createNewConversation('English')}
                         disabled={isCreating}
                       >
                         Start Conversation
@@ -258,20 +256,20 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="overflow-hidden">
                 <div className="h-2 bg-purple-600"></div>
                 <CardContent className="pt-6">
                   <div className="flex flex-col space-y-4">
-                    <h3 className="text-xl font-bold">Kiswahili</h3>
+                    <h3 className="text-xl font-bold">Dholuo</h3>
                     <p className="text-gray-500 dark:text-gray-400">
-                      One of Kenya's official languages and a lingua franca across East Africa, with over 100 million speakers worldwide.
+                      Also known as Luo, the language of the Luo people, the third largest ethnic group in Kenya, primarily living around Lake Victoria.
                     </p>
                     <div className="mt-auto pt-4">
-                      <Button 
-                        className="w-full" 
+                      <Button
+                        className="w-full"
                         variant="outline"
-                        onClick={() => createNewConversation('Kiswahili')}
+                        onClick={() => createNewConversation('Luo')}
                         disabled={isCreating}
                       >
                         Start Conversation
@@ -281,40 +279,10 @@ export default function HomePage() {
                   </div>
                 </CardContent>
               </Card>
-              
-              <Card className="overflow-hidden">
-                <div className="h-2 bg-orange-500"></div>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col space-y-4">
-                    <h3 className="text-xl font-bold">Kikuyu</h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      The language of Kenya's largest ethnic group, the Agikuyu people, primarily spoken in the central highlands.
-                    </p>
-                    <div className="mt-auto pt-4">
-                      <Button 
-                        className="w-full" 
-                        variant="outline"
-                        onClick={() => createNewConversation('Kikuyu')}
-                        disabled={isCreating}
-                      >
-                        Start Conversation
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="flex justify-center mt-10">
-              <Button variant="outline" size="lg">
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Explore More Languages
-              </Button>
             </div>
           </div>
         </section>
-        
+
         {/* Recent Conversations Section */}
         {user && (
           <section className="py-12 md:py-24 bg-gray-50 dark:bg-gray-800">
@@ -323,7 +291,7 @@ export default function HomePage() {
                 <h2 className="text-3xl font-bold tracking-tighter">Your Recent Conversations</h2>
                 <Button onClick={() => navigate("/")}>View All</Button>
               </div>
-              
+
               {isLoading ? (
                 <div className="flex justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -336,8 +304,8 @@ export default function HomePage() {
                     <p className="text-gray-500 dark:text-gray-400 mb-6">
                       Start your first conversation in any of the supported languages
                     </p>
-                    <Button 
-                      onClick={() => createNewConversation('Maasai')}
+                    <Button
+                      onClick={() => createNewConversation('Luo')}
                       disabled={isCreating}
                     >
                       {isCreating ? (
@@ -369,9 +337,7 @@ export default function HomePage() {
                               {new Date(conversation.updatedAt).toLocaleDateString()}
                             </p>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                              Language: {conversation.language === 'mas' ? 'Maasai' :
-                                        conversation.language === 'swa' ? 'Kiswahili' :
-                                        conversation.language === 'kik' ? 'Kikuyu' : conversation.language}
+                              Language: {conversation.language === 'luo' ? 'Luo' : 'English'}
                             </p>
                           </div>
                           <ArrowRight className="h-5 w-5 text-gray-400" />
@@ -385,7 +351,7 @@ export default function HomePage() {
           </section>
         )}
       </main>
-      
+
       <Footer />
     </div>
   );
