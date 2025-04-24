@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { getConversation } from "@/lib/api";
-import { connectWebSocket, addMessageListener, closeConnection, sendMessage, addTranslationListener } from "@/lib/socket";
-import { Message, TranslationResult } from "@/types";
+import { connectWebSocket, addMessageListener, closeConnection } from "@/lib/socket";
+import { Message } from "@/types";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
-import { DholuoInput } from "./dholuo-input";
 import { LanguageSelector } from "@/components/ui/language-selector";
 import { Button } from "@/components/ui/button";
 import { Loader2, Columns, MoreVertical, ChevronLeft } from "lucide-react";
@@ -28,7 +27,6 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
   const conversationId = parseInt(id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showSideBySide, setShowSideBySide] = useState(false);
-  const [showDholuoInput, setShowDholuoInput] = useState(false);
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -39,7 +37,7 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
   });
 
   const conversation = data?.conversation;
-
+  
   // Initialize messages from the query result
   useEffect(() => {
     if (data?.messages) {
@@ -50,29 +48,15 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
   // Set up WebSocket connection for real-time messages
   useEffect(() => {
     const socket = connectWebSocket();
-
-    const removeMessageListener = addMessageListener((message: Message) => {
+    
+    const removeListener = addMessageListener((message: Message) => {
       if (message.conversationId === conversationId) {
         setMessages(prev => [...prev, message]);
       }
     });
-
-    const removeTranslationListener = addTranslationListener((result: TranslationResult) => {
-      // Handle translation results
-      window.dispatchEvent(new MessageEvent("message", {
-        data: {
-          type: "translation",
-          originalText: result.originalText,
-          translatedText: result.translatedText,
-          sourceLanguage: result.sourceLanguage,
-          targetLanguage: result.targetLanguage
-        }
-      }));
-    });
-
+    
     return () => {
-      removeMessageListener();
-      removeTranslationListener();
+      removeListener();
       closeConnection();
     };
   }, [conversationId]);
@@ -81,32 +65,6 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Handle translation from Dholuo to English
-  const handleTranslationComplete = (originalText: string, translatedText: string) => {
-    if (!user || !conversation) return;
-
-    // Send the original Dholuo text as a user message
-    sendMessage(conversationId, originalText, user.id, "luo");
-
-    // After a short delay, send the translated text as a system message
-    setTimeout(() => {
-      // We don't send this through the socket directly, but add it to our local messages
-      // This is a special case for the Dholuo input feature
-      const translationMessage: Message = {
-        id: Date.now(), // Use timestamp as temporary ID
-        conversationId,
-        content: translatedText,
-        isUserMessage: false,
-        createdAt: new Date().toISOString(),
-        translation: originalText, // Store the original Dholuo text as the translation
-        fileUrl: null,
-        audioUrl: null
-      };
-
-      setMessages(prev => [...prev, translationMessage]);
-    }, 1000);
-  };
 
   if (isLoading) {
     return (
@@ -163,27 +121,15 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
             </div>
           </div>
         </div>
-
+        
         {/* Chat Actions */}
         <div className="flex items-center space-x-3">
-          {/* Dholuo Input Toggle - only show for Luo language */}
-          {conversation.language === "luo" && (
-            <Button
-              variant={showDholuoInput ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowDholuoInput(!showDholuoInput)}
-              className={showDholuoInput ? "bg-orange-600 hover:bg-orange-700" : "text-orange-600 border-orange-600 hover:bg-orange-50"}
-            >
-              {showDholuoInput ? "Hide Dholuo Input" : "Show Dholuo Input"}
-            </Button>
-          )}
-
           {/* Language Selector */}
-          <LanguageSelector
-            selectedLanguage={conversation.language}
-            onLanguageChange={handleLanguageChange}
+          <LanguageSelector 
+            selectedLanguage={conversation.language} 
+            onLanguageChange={handleLanguageChange} 
           />
-
+          
           {/* Side-by-Side Toggle */}
           <Button
             variant="outline"
@@ -193,7 +139,7 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
           >
             <Columns className="h-4 w-4" />
           </Button>
-
+          
           {/* More Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -227,7 +173,7 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
           </DropdownMenu>
         </div>
       </div>
-
+      
       {/* Chat Messages Area */}
       <div className={`flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin ${showSideBySide ? 'h-1/2' : ''}`}>
         {messages.length === 0 ? (
@@ -242,12 +188,12 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
               </div>
               <h2 className="text-xl font-bold text-center mb-2">Welcome to Translinqual AI</h2>
               <p className="text-center text-gray-600 dark:text-gray-300 mb-6">
-                I can help you translate and learn Dholuo. Try asking me something or use the Dholuo input feature!
+                I can help you translate and learn Maasai and other Kenyan languages. Try asking me something!
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Button variant="outline" className="text-left">
                   <div>
-                    <span className="block font-medium">Translate to Dholuo</span>
+                    <span className="block font-medium">Translate to Maasai</span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">Hello, how are you?</span>
                   </div>
                 </Button>
@@ -260,13 +206,13 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
                 <Button variant="outline" className="text-left">
                   <div>
                     <span className="block font-medium">Cultural insights</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Tell me about Dholuo traditions</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Tell me about Maasai traditions</span>
                   </div>
                 </Button>
                 <Button variant="outline" className="text-left">
                   <div>
-                    <span className="block font-medium">Try Dholuo input</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Type in Dholuo and get English translation</span>
+                    <span className="block font-medium">Pronunciation help</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">How to say key words correctly</span>
                   </div>
                 </Button>
               </div>
@@ -274,16 +220,16 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
           </div>
         ) : (
           messages.map(message => (
-            <ChatMessage
-              key={message.id}
-              message={message}
+            <ChatMessage 
+              key={message.id} 
+              message={message} 
               language={conversation.language}
             />
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
-
+      
       {/* Side-by-Side View */}
       {showSideBySide && (
         <div className="h-1/2 border-t dark:border-gray-800 bg-white dark:bg-gray-900">
@@ -292,25 +238,20 @@ export function ChatArea({ onOpenSidebar }: ChatAreaProps) {
               <h3 className="font-medium mb-2">Original Text (English)</h3>
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <p>Hello, how are you?</p>
-                <p className="mt-2">I'm learning Dholuo and I find it fascinating. The Luo culture is rich in traditions and customs.</p>
+                <p className="mt-2">I'm learning Maasai and I find it fascinating. The Maasai culture is rich in traditions and customs.</p>
               </div>
             </div>
             <div className="w-1/2 p-4 overflow-y-auto scrollbar-thin">
-              <h3 className="font-medium mb-2">Translated Text (Dholuo)</h3>
+              <h3 className="font-medium mb-2">Translated Text (Maasai)</h3>
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p>Misawa, idhi nade?</p>
-                <p className="mt-2">Apuonjora Dholuo kendo aneno kaka en gima lich. Kit ngima jo-Luo opong' gi timbe kod kit ngima mopogore.</p>
+                <p>Sopa, kaa eeta?</p>
+                <p className="mt-2">Atakin enkutuk oo Lmaasai nanu iyieyu aleng. Eishoi oo Lmaasai keiruk ilkarash oo ltungana.</p>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Dholuo Input Area - only show when toggled and for Luo language */}
-      {showDholuoInput && conversation.language === "luo" && (
-        <DholuoInput onTranslationComplete={handleTranslationComplete} />
-      )}
-
+      
       {/* Chat Input Area */}
       <ChatInput
         conversationId={conversationId}

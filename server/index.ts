@@ -61,7 +61,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     // In production, serve static files from the dist/public directory
     const publicPath = path.resolve(__dirname, "..", "dist", "public");
     app.use(express.static(publicPath));
-
+    
     // Serve index.html for all routes that don't match a file
     app.get("*", (_req: Request, res: Response) => {
       res.sendFile(path.resolve(publicPath, "index.html"));
@@ -69,8 +69,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   }
 
   const port = process.env.PORT || 3000;
-  const host = process.env.HOST || '0.0.0.0'; // Listen on all interfaces
-  server.listen(port, host, () => {
-    log(`Server running on ${host}:${port}`);
+  server.listen(port, () => {
+    log(`Server running on port ${port}`);
   });
 })();

@@ -1,16 +1,10 @@
-// NOTE: This file is no longer used. We're using Google Translate without API key instead.
-// Keeping this file for reference only.
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Dummy implementation to avoid errors
-const genAI = {
-  getGenerativeModel: () => ({
-    generateContent: async () => ({
-      response: {
-        text: () => "This functionality is disabled"
-      }
-    })
-  })
-};
+// Access API key from environment variables
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// Create a Gemini client
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY!);
 
 // Function to translate text using Gemini model
 export async function translateWithGemini(
@@ -23,14 +17,14 @@ export async function translateWithGemini(
 
     // Create a prompt for translation
     const prompt = `
-    Translate the following text from ${sourceLanguage} to ${targetLanguage}.
+    Translate the following text from ${sourceLanguage} to ${targetLanguage}. 
 
-    If the source language is English and the target language is Kiswahili, Maasai, or another Kenyan language,
-    ensure correct cultural context is preserved. Similarly, when translating from a Kenyan language to English,
+    If the source language is English and the target language is Kiswahili, Maasai, or another Kenyan language, 
+    ensure correct cultural context is preserved. Similarly, when translating from a Kenyan language to English, 
     provide translation that captures cultural nuances.
 
     Text to translate: "${text}"
-
+    
     Provide only the translated text without quotes or explanations.
     `;
 
@@ -39,7 +33,7 @@ export async function translateWithGemini(
     return response.text().trim();
   } catch (error) {
     console.error("Error translating with Gemini:", error);
-
+    
     // Return a fallback message in case of error
     return `[Translation error: Could not translate text. Please try again later.]`;
   }
@@ -62,7 +56,7 @@ export async function getLanguageInsights(
     Analyze the following text in ${language} and provide linguistic insights:
 
     Text: "${text}"
-
+    
     Please provide a detailed response in JSON format with the following structure:
     {
       "culturalContext": "Brief explanation of cultural context and relevance",
@@ -74,7 +68,7 @@ export async function getLanguageInsights(
     const result = await model.generateContent(prompt);
     const response = result.response;
     const responseText = response.text().trim();
-
+    
     try {
       // Parse the JSON response
       const parsedResponse = JSON.parse(responseText.replace(/```json|```/g, '').trim());
@@ -94,7 +88,7 @@ export async function getLanguageInsights(
     }
   } catch (error) {
     console.error("Error getting language insights from Gemini:", error);
-
+    
     // Return fallback data in case of error
     return {
       culturalContext: "Cultural context information not available at the moment.",
@@ -113,7 +107,7 @@ export async function generateResponse(
     const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
     // Determine language name based on code
-    const languageName =
+    const languageName = 
       language === "mas" ? "Maasai" :
       language === "swa" ? "Kiswahili" :
       language === "kik" ? "Kikuyu" :
@@ -123,7 +117,7 @@ export async function generateResponse(
     const prompt = `
     You are a culturally aware and helpful assistant that specializes in ${languageName} language and culture.
     Please respond to the following message in ${languageName === "English" ? "English" : "English, followed by a translation in " + languageName}.
-
+    
     If the user's message is in ${languageName} and not English, translate it to English in your response, then answer in both languages.
 
     Make your response culturally appropriate and educational, teaching aspects of the language naturally through your response.
@@ -137,7 +131,7 @@ export async function generateResponse(
     return response.text().trim();
   } catch (error) {
     console.error("Error generating response with Gemini:", error);
-
+    
     // Return a fallback message in case of error
     return `I apologize, but I'm having trouble generating a response at the moment. Please try again later.`;
   }

@@ -1,4 +1,4 @@
-import { User, InsertUser, Conversation, Message, ApiKey, Language, Translation, InsertConversation, InsertMessage, InsertApiKey, InsertLanguage, InsertTranslation } from "@shared/schema";
+import { User, InsertUser, Conversation, Message, ApiKey, Language, InsertConversation, InsertMessage, InsertApiKey, InsertLanguage } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -11,36 +11,32 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<User>): Promise<User | undefined>;
-
+  
   // Conversation operations
   getConversation(id: number): Promise<Conversation | undefined>;
   getConversationsByUserId(userId: number): Promise<Conversation[]>;
   createConversation(conversation: InsertConversation): Promise<Conversation>;
   updateConversation(id: number, data: Partial<Conversation>): Promise<Conversation | undefined>;
   deleteConversation(id: number): Promise<boolean>;
-
+  
   // Message operations
   getMessage(id: number): Promise<Message | undefined>;
   getMessagesByConversationId(conversationId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
-
+  
   // API Key operations
   getApiKeys(): Promise<ApiKey[]>;
   getApiKeyByProvider(provider: string): Promise<ApiKey | undefined>;
   createApiKey(apiKey: InsertApiKey): Promise<ApiKey>;
   updateApiKey(id: number, data: Partial<ApiKey>): Promise<ApiKey | undefined>;
   deleteApiKey(id: number): Promise<boolean>;
-
+  
   // Language operations
   getLanguages(): Promise<Language[]>;
   getLanguageByCode(code: string): Promise<Language | undefined>;
   createLanguage(language: InsertLanguage): Promise<Language>;
   updateLanguage(id: number, data: Partial<Language>): Promise<Language | undefined>;
-
-  // Translation operations
-  getTranslation(sourceText: string, sourceLanguage: string, targetLanguage: string): Promise<Translation | undefined>;
-  createTranslation(translation: InsertTranslation): Promise<Translation>;
-
+  
   // Session store
   sessionStore: session.SessionStore;
 }
@@ -51,8 +47,7 @@ export class MemStorage implements IStorage {
   private messages: Map<number, Message>;
   private apiKeys: Map<number, ApiKey>;
   private languages: Map<number, Language>;
-  private translations: Map<number, Translation>;
-  currentId: { users: number, conversations: number, messages: number, apiKeys: number, languages: number, translations: number };
+  currentId: { users: number, conversations: number, messages: number, apiKeys: number, languages: number };
   sessionStore: session.SessionStore;
 
   constructor() {
@@ -61,31 +56,33 @@ export class MemStorage implements IStorage {
     this.messages = new Map();
     this.apiKeys = new Map();
     this.languages = new Map();
-    this.translations = new Map();
-
+    
     this.currentId = {
       users: 1,
       conversations: 1,
       messages: 1,
       apiKeys: 1,
-      languages: 1,
-      translations: 1
+      languages: 1
     };
-
+    
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // Clear expired sessions once per day
     });
-
+    
     // Initialize with default languages
     this.seedLanguages();
   }
 
   private seedLanguages() {
     const defaultLanguages: InsertLanguage[] = [
-      { name: "English", code: "eng", isActive: true, region: "Global" },
-      { name: "Luo", code: "luo", isActive: true, region: "Kenya" }
+      { name: "Maasai", code: "mas", isActive: true, region: "Kenya" },
+      { name: "Kiswahili", code: "swa", isActive: true, region: "Kenya" },
+      { name: "Kikuyu", code: "kik", isActive: true, region: "Kenya" },
+      { name: "Luo", code: "luo", isActive: true, region: "Kenya" },
+      { name: "Kamba", code: "kam", isActive: true, region: "Kenya" },
+      { name: "English", code: "eng", isActive: true, region: "Global" }
     ];
-
+    
     defaultLanguages.forEach(language => {
       this.createLanguage(language);
     });
@@ -105,9 +102,9 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentId.users++;
     const timestamp = new Date();
-    const user: User = {
-      ...insertUser,
-      id,
+    const user: User = { 
+      ...insertUser, 
+      id, 
       role: "user",
       avatar: "",
       createdAt: timestamp
@@ -119,7 +116,7 @@ export class MemStorage implements IStorage {
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
     const user = await this.getUser(id);
     if (!user) return undefined;
-
+    
     const updatedUser = { ...user, ...userData };
     this.users.set(id, updatedUser);
     return updatedUser;
@@ -152,9 +149,9 @@ export class MemStorage implements IStorage {
   async updateConversation(id: number, data: Partial<Conversation>): Promise<Conversation | undefined> {
     const conversation = await this.getConversation(id);
     if (!conversation) return undefined;
-
-    const updatedConversation = {
-      ...conversation,
+    
+    const updatedConversation = { 
+      ...conversation, 
       ...data,
       updatedAt: new Date()
     };
@@ -186,13 +183,13 @@ export class MemStorage implements IStorage {
       createdAt: timestamp
     };
     this.messages.set(id, message);
-
+    
     // Update conversation timestamp
     const conversation = await this.getConversation(messageData.conversationId);
     if (conversation) {
       await this.updateConversation(conversation.id, { updatedAt: timestamp });
     }
-
+    
     return message;
   }
 
@@ -223,9 +220,9 @@ export class MemStorage implements IStorage {
   async updateApiKey(id: number, data: Partial<ApiKey>): Promise<ApiKey | undefined> {
     const apiKey = this.apiKeys.get(id);
     if (!apiKey) return undefined;
-
-    const updatedApiKey = {
-      ...apiKey,
+    
+    const updatedApiKey = { 
+      ...apiKey, 
       ...data,
       updatedAt: new Date()
     };
@@ -261,32 +258,10 @@ export class MemStorage implements IStorage {
   async updateLanguage(id: number, data: Partial<Language>): Promise<Language | undefined> {
     const language = this.languages.get(id);
     if (!language) return undefined;
-
+    
     const updatedLanguage = { ...language, ...data };
     this.languages.set(id, updatedLanguage);
     return updatedLanguage;
-  }
-
-  // Translation operations
-  async getTranslation(sourceText: string, sourceLanguage: string, targetLanguage: string): Promise<Translation | undefined> {
-    return Array.from(this.translations.values()).find(
-      translation =>
-        translation.sourceText === sourceText &&
-        translation.sourceLanguage === sourceLanguage &&
-        translation.targetLanguage === targetLanguage
-    );
-  }
-
-  async createTranslation(translationData: InsertTranslation): Promise<Translation> {
-    const id = this.currentId.translations++;
-    const timestamp = new Date();
-    const translation: Translation = {
-      ...translationData,
-      id,
-      createdAt: timestamp
-    };
-    this.translations.set(id, translation);
-    return translation;
   }
 }
 

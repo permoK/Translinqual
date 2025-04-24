@@ -52,15 +52,6 @@ export const languages = pgTable("languages", {
   region: text("region"),
 });
 
-export const translations = pgTable("translations", {
-  id: serial("id").primaryKey(),
-  sourceText: text("source_text").notNull(),
-  translatedText: text("translated_text").notNull(),
-  sourceLanguage: text("source_language").notNull(),
-  targetLanguage: text("target_language").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -99,13 +90,6 @@ export const insertLanguageSchema = createInsertSchema(languages).pick({
   region: true,
 });
 
-export const insertTranslationSchema = createInsertSchema(translations).pick({
-  sourceText: true,
-  translatedText: true,
-  sourceLanguage: true,
-  targetLanguage: true,
-});
-
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(3),
@@ -127,8 +111,5 @@ export type Message = typeof messages.$inferSelect;
 
 export type InsertLanguage = z.infer<typeof insertLanguageSchema>;
 export type Language = typeof languages.$inferSelect;
-
-export type InsertTranslation = z.infer<typeof insertTranslationSchema>;
-export type Translation = typeof translations.$inferSelect;
 
 export type LoginData = z.infer<typeof loginSchema>;
