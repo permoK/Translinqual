@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { setupChatRoutes } from "./chat";
+import { setupProxyRoutes } from "./proxy";
 import { storage } from "./storage";
 import { translateText } from "./ai";
 
@@ -14,6 +15,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup chat and WebSocket routes
   setupChatRoutes(app, httpServer);
+
+  // Setup proxy routes for translation API
+  setupProxyRoutes(app);
 
   // Admin routes for API key management
   app.get("/api/admin/api-keys", async (req, res) => {

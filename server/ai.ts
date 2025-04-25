@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import { translateToLuo, translateFromLuo } from "./luo-model";
+import { translateToLuo, translateFromLuo } from "./luo-translator";
 
 // This function generates AI responses for Luo language
 export async function sendAiResponse(message: string, language: string): Promise<string> {
@@ -24,11 +24,17 @@ export async function sendAiResponse(message: string, language: string): Promise
 // Function to translate text between languages
 export async function translateText(text: string, sourceLanguage: string, targetLanguage: string): Promise<string> {
   try {
+    console.log(`Translation request: ${sourceLanguage} → ${targetLanguage}: "${text}"`);
+
     // For Luo language translation, use our specialized model
     if (sourceLanguage === "eng" && targetLanguage === "luo") {
-      return await translateToLuo(text);
+      const result = await translateToLuo(text);
+      console.log(`Translation result: "${result}"`);
+      return result;
     } else if (sourceLanguage === "luo" && targetLanguage === "eng") {
-      return await translateFromLuo(text);
+      const result = await translateFromLuo(text);
+      console.log(`Translation result: "${result}"`);
+      return result;
     }
 
     // For unsupported language pairs, return a message

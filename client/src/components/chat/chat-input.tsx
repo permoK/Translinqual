@@ -6,6 +6,7 @@ import { DrawingPad } from "@/components/ui/drawing-pad";
 import { FileUpload } from "@/components/ui/file-upload";
 import { sendMessage } from "@/lib/socket";
 import { startSpeechRecognition, speakText } from "@/lib/speech";
+import { translateText } from "@/lib/translation";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bold, Italic, Link, Mic, Send, Image, FileText,
@@ -123,21 +124,13 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
         else if (hasEnglishContent) {
           try {
             // Get Luo translation
-            const response = await fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: englishMessage.trim(),
-                sourceLanguage: 'eng',
-                targetLanguage: 'luo'
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
+            // Get Luo translation using our translation service
+            try {
+              const translatedText = await translateText(englishMessage.trim());
               // Send the English message with its Luo translation
-              sendMessage(conversationId, englishMessage.trim(), userId, "eng", data.translatedText);
-            } else {
+              sendMessage(conversationId, englishMessage.trim(), userId, "eng", translatedText);
+            } catch (error) {
+              console.error("Translation error:", error);
               // If translation fails, just send the English message
               sendMessage(conversationId, englishMessage.trim(), userId, "eng");
             }
@@ -150,22 +143,13 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
         // If only Luo has content, translate it to English first
         else if (hasLuoContent) {
           try {
-            // Get English translation
-            const response = await fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: luoMessage.trim(),
-                sourceLanguage: 'luo',
-                targetLanguage: 'eng'
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
+            // Get English translation using our translation service
+            try {
+              const translatedText = await translateText(luoMessage.trim());
               // Send the Luo message with its English translation
-              sendMessage(conversationId, luoMessage.trim(), userId, "luo", data.translatedText);
-            } else {
+              sendMessage(conversationId, luoMessage.trim(), userId, "luo", translatedText);
+            } catch (error) {
+              console.error("Translation error:", error);
               // If translation fails, just send the Luo message
               sendMessage(conversationId, luoMessage.trim(), userId, "luo");
             }
@@ -563,36 +547,27 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
                             description: "English to Luo translation in progress",
                           });
 
-                          const response = await fetch('/api/translate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              text: englishMessage,
-                              sourceLanguage: 'eng',
-                              targetLanguage: 'luo'
-                            })
-                          });
+                          try {
+                            // Use our translation service
+                            const translatedText = await translateText(englishMessage);
+                            console.log("Translation result:", translatedText);
 
-                          if (response.ok) {
-                            const data = await response.json();
-                            console.log("Translation result:", data);
+                            // Set the translated text
+                            setLuoMessage(translatedText);
 
-                            if (data.translatedText) {
-                              setLuoMessage(data.translatedText);
+                            toast({
+                              title: "Translation Complete",
+                              description: `"${englishMessage}" → "${translatedText}"`,
+                            });
 
-                              toast({
-                                title: "Translation Complete",
-                                description: `"${englishMessage}" → "${data.translatedText}"`,
-                              });
-
-                              // Resize the Luo textarea
-                              if (luoTextareaRef.current) {
-                                luoTextareaRef.current.style.height = "auto";
-                                luoTextareaRef.current.style.height =
-                                  Math.min(luoTextareaRef.current.scrollHeight, 200) + "px";
-                              }
+                            // Resize the Luo textarea
+                            if (luoTextareaRef.current) {
+                              luoTextareaRef.current.style.height = "auto";
+                              luoTextareaRef.current.style.height =
+                                Math.min(luoTextareaRef.current.scrollHeight, 200) + "px";
                             }
-                          } else {
+                          } catch (error) {
+                            console.error("Translation error:", error);
                             toast({
                               title: "Translation Failed",
                               description: "Could not translate text. Please try again.",
@@ -618,36 +593,27 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
                             description: "Luo to English translation in progress",
                           });
 
-                          const response = await fetch('/api/translate', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              text: luoMessage,
-                              sourceLanguage: 'luo',
-                              targetLanguage: 'eng'
-                            })
-                          });
+                          try {
+                            // Use our translation service
+                            const translatedText = await translateText(luoMessage);
+                            console.log("Translation result:", translatedText);
 
-                          if (response.ok) {
-                            const data = await response.json();
-                            console.log("Translation result:", data);
+                            // Set the translated text
+                            setEnglishMessage(translatedText);
 
-                            if (data.translatedText) {
-                              setEnglishMessage(data.translatedText);
+                            toast({
+                              title: "Translation Complete",
+                              description: `"${luoMessage}" → "${translatedText}"`,
+                            });
 
-                              toast({
-                                title: "Translation Complete",
-                                description: `"${luoMessage}" → "${data.translatedText}"`,
-                              });
-
-                              // Resize the English textarea
-                              if (englishTextareaRef.current) {
-                                englishTextareaRef.current.style.height = "auto";
-                                englishTextareaRef.current.style.height =
-                                  Math.min(englishTextareaRef.current.scrollHeight, 200) + "px";
-                              }
+                            // Resize the English textarea
+                            if (englishTextareaRef.current) {
+                              englishTextareaRef.current.style.height = "auto";
+                              englishTextareaRef.current.style.height =
+                                Math.min(englishTextareaRef.current.scrollHeight, 200) + "px";
                             }
-                          } else {
+                          } catch (error) {
+                            console.error("Translation error:", error);
                             toast({
                               title: "Translation Failed",
                               description: "Could not translate text. Please try again.",
