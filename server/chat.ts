@@ -60,7 +60,7 @@ export function setupChatRoutes(app: Express, server: Server) {
 
         if (data.type === "message") {
           // Handle chat message
-          const { conversationId, content, userId, language } = data;
+          const { conversationId, content, userId, language, translation } = data;
 
           // Let the client know we're processing
           ws.send(JSON.stringify({
@@ -68,12 +68,12 @@ export function setupChatRoutes(app: Express, server: Server) {
             conversationId
           }));
 
-          // Store user message
+          // Store user message with translation if provided
           const userMessage = await storage.createMessage({
             conversationId,
             content,
             isUserMessage: true,
-            translation: null,
+            translation: translation || null,
             fileUrl: null,
             audioUrl: null
           });
@@ -88,12 +88,15 @@ export function setupChatRoutes(app: Express, server: Server) {
           const aiResponse = await sendAiResponse(content, language);
 
           // Get translation if needed (for non-English responses)
-          let translation = null;
+          let aiTranslation = null;
           if (language !== "eng") {
             try {
-              // Only translate if the response contains text in the target language
-              // This is a simplistic check; a real implementation would use language detection
-              if (aiResponse.length > 50) { // Assuming longer responses have both languages
+              // For Luo language, always translate the response to English
+              if (language === "luo") {
+                aiTranslation = await translateText(aiResponse, "luo", "eng");
+              }
+              // For other languages (if we add them back later)
+              else if (aiResponse.length > 50) { // Assuming longer responses have both languages
                 // Try to extract the translated part using a pattern
                 const languageName =
                   language === "mas" ? "Maasai" :
@@ -103,7 +106,7 @@ export function setupChatRoutes(app: Express, server: Server) {
                 if (languageName) {
                   // This is just a simple approach - in a production app, you'd want
                   // more sophisticated parsing or have the AI return structured data
-                  translation = await translateText(aiResponse, languageName, "English");
+                  aiTranslation = await translateText(aiResponse, languageName, "English");
                 }
               }
             } catch (translationError) {
@@ -116,7 +119,7 @@ export function setupChatRoutes(app: Express, server: Server) {
           let insights = null;
           try {
             if (language !== "eng") {
-              const languageName =
+              const languageName = language === "luo" ? "Luo" :
                 language === "mas" ? "Maasai" :
                 language === "swa" ? "Kiswahili" :
                 language === "kik" ? "Kikuyu" : "English";
@@ -133,7 +136,7 @@ export function setupChatRoutes(app: Express, server: Server) {
             conversationId,
             content: aiResponse,
             isUserMessage: false,
-            translation, // May be null if no translation
+            translation: aiTranslation, // May be null if no translation
             fileUrl: null,
             audioUrl: null
           });
@@ -357,18 +360,28 @@ export function setupChatRoutes(app: Express, server: Server) {
     }
   });
 
+  // Simple test endpoint to check if the server is responding
+  app.get("/api/translate/test", (req, res) => {
+    res.json({ status: "ok", message: "Translation API is working" });
+  });
+
   // Translation API (no authentication required for split view)
   app.post("/api/translate", async (req, res) => {
     try {
       const { text, sourceLanguage, targetLanguage } = req.body;
+
+      console.log("Translation request received:", { text, sourceLanguage, targetLanguage });
 
       if (!text || !sourceLanguage || !targetLanguage) {
         return res.status(400).json({ message: "Text, sourceLanguage, and targetLanguage are required" });
       }
 
       const translatedText = await translateText(text, sourceLanguage, targetLanguage);
+      console.log("Translation result:", translatedText);
+
       res.json({ originalText: text, translatedText });
     } catch (error) {
+      console.error("Translation error:", error);
       res.status(500).json({ message: "Failed to translate text", error: (error as Error).message });
     }
   });

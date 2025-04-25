@@ -20,19 +20,19 @@ export function connectWebSocket(): WebSocket {
 
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.host}/ws`;
-  
+
   socket = new WebSocket(wsUrl);
-  
+
   socket.onopen = () => {
     console.log("WebSocket connection established");
     reconnectAttempts = 0;
     connectionListeners.forEach(listener => listener(true));
   };
-  
+
   socket.onmessage = (event) => {
     try {
       const data: WebSocketMessage = JSON.parse(event.data);
-      
+
       switch (data.type) {
         case "message":
           if (data.message) {
@@ -71,22 +71,22 @@ export function connectWebSocket(): WebSocket {
       console.error("Error parsing WebSocket message:", error);
     }
   };
-  
+
   socket.onclose = (event) => {
     console.log("WebSocket connection closed", event.code, event.reason);
     connectionListeners.forEach(listener => listener(false));
-    
+
     // Attempt to reconnect if not a clean close
     if (event.code !== 1000 && event.code !== 1001) {
       attemptReconnect();
     }
   };
-  
+
   socket.onerror = (error) => {
     console.error("WebSocket error:", error);
     errorListeners.forEach(listener => listener("Connection error"));
   };
-  
+
   return socket;
 }
 
@@ -95,33 +95,34 @@ function attemptReconnect() {
     console.error("Maximum reconnection attempts reached");
     return;
   }
-  
+
   reconnectAttempts++;
-  
+
   setTimeout(() => {
     console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
     connectWebSocket();
   }, RECONNECT_DELAY * reconnectAttempts);
 }
 
-export function sendMessage(conversationId: number, content: string, userId: number, language: string) {
+export function sendMessage(conversationId: number, content: string, userId: number, language: string, translation?: string) {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     const newSocket = connectWebSocket();
     // Wait for connection before sending
     newSocket.addEventListener("open", () => {
-      sendMessage(conversationId, content, userId, language);
+      sendMessage(conversationId, content, userId, language, translation);
     });
     return;
   }
-  
+
   const message = {
     type: "message",
     conversationId,
     content,
     userId,
-    language
+    language,
+    translation
   };
-  
+
   socket.send(JSON.stringify(message));
 }
 
@@ -200,14 +201,14 @@ export function requestTranslation(text: string, sourceLanguage: string, targetL
     });
     return;
   }
-  
+
   const request = {
     type: "translate",
     text,
     sourceLanguage,
     targetLanguage
   };
-  
+
   socket.send(JSON.stringify(request));
 }
 
@@ -219,12 +220,12 @@ export function requestLinguisticInsights(text: string, language: string) {
     });
     return;
   }
-  
+
   const request = {
     type: "insights",
     text,
     language
   };
-  
+
   socket.send(JSON.stringify(request));
 }

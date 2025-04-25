@@ -92,10 +92,12 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
   }, [isToolbarVisible]);
 
   const handleSendMessage = () => {
-    // Determine which message to send based on which one has content
-    const messageToSend = englishMessage.trim() || luoMessage.trim();
+    // Check if we have content in either language
+    const hasEnglishContent = englishMessage.trim().length > 0;
+    const hasLuoContent = luoMessage.trim().length > 0;
 
-    if (!messageToSend || isSending) return;
+    // At least one language must have content
+    if ((!hasEnglishContent && !hasLuoContent) || isSending) return;
 
     if (isOffline) {
       // Store message locally for later sending
@@ -110,28 +112,90 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
     setIsSending(true);
 
     // Send with a slight animation delay to show the sending state
-    setTimeout(() => {
-      // Determine the language of the message
-      const messageLang = englishMessage.trim() ? "eng" : "luo";
+    setTimeout(async () => {
+      try {
+        // If both languages have content, send the English message with Luo translation
+        if (hasEnglishContent && hasLuoContent) {
+          // Send the English message with its Luo translation
+          sendMessage(conversationId, englishMessage.trim(), userId, "eng", luoMessage.trim());
+        }
+        // If only English has content, translate it to Luo first
+        else if (hasEnglishContent) {
+          try {
+            // Get Luo translation
+            const response = await fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: englishMessage.trim(),
+                sourceLanguage: 'eng',
+                targetLanguage: 'luo'
+              })
+            });
 
-      // Send the message with the appropriate language
-      sendMessage(conversationId, messageToSend, userId, messageLang);
+            if (response.ok) {
+              const data = await response.json();
+              // Send the English message with its Luo translation
+              sendMessage(conversationId, englishMessage.trim(), userId, "eng", data.translatedText);
+            } else {
+              // If translation fails, just send the English message
+              sendMessage(conversationId, englishMessage.trim(), userId, "eng");
+            }
+          } catch (error) {
+            console.error("Translation error:", error);
+            // If translation fails, just send the English message
+            sendMessage(conversationId, englishMessage.trim(), userId, "eng");
+          }
+        }
+        // If only Luo has content, translate it to English first
+        else if (hasLuoContent) {
+          try {
+            // Get English translation
+            const response = await fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: luoMessage.trim(),
+                sourceLanguage: 'luo',
+                targetLanguage: 'eng'
+              })
+            });
 
-      // Clear both input fields
-      setEnglishMessage("");
-      setLuoMessage("");
-      setIsSending(false);
+            if (response.ok) {
+              const data = await response.json();
+              // Send the Luo message with its English translation
+              sendMessage(conversationId, luoMessage.trim(), userId, "luo", data.translatedText);
+            } else {
+              // If translation fails, just send the Luo message
+              sendMessage(conversationId, luoMessage.trim(), userId, "luo");
+            }
+          } catch (error) {
+            console.error("Translation error:", error);
+            // If translation fails, just send the Luo message
+            sendMessage(conversationId, luoMessage.trim(), userId, "luo");
+          }
+        }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        toast({
+          title: "Error sending message",
+          description: "Please try again",
+          variant: "destructive"
+        });
+      } finally {
+        // Clear both input fields
+        setEnglishMessage("");
+        setLuoMessage("");
+        setIsSending(false);
 
-      // Resize the textareas back to initial size
-      if (englishTextareaRef.current) {
-        englishTextareaRef.current.style.height = "auto";
+        // Resize the textareas back to initial size
+        if (englishTextareaRef.current) {
+          englishTextareaRef.current.style.height = "auto";
+        }
+        if (luoTextareaRef.current) {
+          luoTextareaRef.current.style.height = "auto";
+        }
       }
-      if (luoTextareaRef.current) {
-        luoTextareaRef.current.style.height = "auto";
-      }
-
-      // Don't reset expanded state for split view
-      // setIsExpanded(false);
     }, 300);
   };
 
@@ -175,57 +239,12 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
       setIsToolbarVisible(true);
     }
 
-    // Auto-translate to Luo if there's content
-    if (newText.trim()) {
-      // Clear any existing timeout
-      if (translationTimeoutRef.current) {
-        clearTimeout(translationTimeoutRef.current);
-      }
+    // We'll disable auto-translation to make the UI more predictable
+    // Users can click the translate button when they're ready
 
-      // Set a new timeout to translate after a delay
-      if (!isTranslating) {
-        setIsTranslating(true);
-
-        translationTimeoutRef.current = setTimeout(async () => {
-          try {
-            // Make a request to your server to translate
-            const response = await fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: newText,
-                sourceLanguage: 'eng',
-                targetLanguage: 'luo'
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-
-              // Only update if we got a valid translation (not an error message)
-              if (data.translatedText && !data.translatedText.startsWith('[Translation')) {
-                setLuoMessage(data.translatedText);
-
-                // Resize the Luo textarea
-                if (luoTextareaRef.current) {
-                  luoTextareaRef.current.style.height = "auto";
-                  luoTextareaRef.current.style.height =
-                    Math.min(luoTextareaRef.current.scrollHeight, maxHeight) + "px";
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Translation error:", error);
-          } finally {
-            setIsTranslating(false);
-            translationTimeoutRef.current = null;
-          }
-        }, 800); // 800ms debounce
-      }
-    } else if (!newText.trim()) {
-      // Clear Luo text if English is empty
+    // Clear Luo text if English is empty
+    if (!newText.trim()) {
       setLuoMessage("");
-      setIsTranslating(false);
       if (translationTimeoutRef.current) {
         clearTimeout(translationTimeoutRef.current);
         translationTimeoutRef.current = null;
@@ -255,57 +274,12 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
       setIsToolbarVisible(true);
     }
 
-    // Auto-translate to English if there's content
-    if (newText.trim()) {
-      // Clear any existing timeout
-      if (translationTimeoutRef.current) {
-        clearTimeout(translationTimeoutRef.current);
-      }
+    // We'll disable auto-translation to make the UI more predictable
+    // Users can click the translate button when they're ready
 
-      // Set a new timeout to translate after a delay
-      if (!isTranslating) {
-        setIsTranslating(true);
-
-        translationTimeoutRef.current = setTimeout(async () => {
-          try {
-            // Make a request to your server to translate
-            const response = await fetch('/api/translate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                text: newText,
-                sourceLanguage: 'luo',
-                targetLanguage: 'eng'
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-
-              // Only update if we got a valid translation (not an error message)
-              if (data.translatedText && !data.translatedText.startsWith('[Translation')) {
-                setEnglishMessage(data.translatedText);
-
-                // Resize the English textarea
-                if (englishTextareaRef.current) {
-                  englishTextareaRef.current.style.height = "auto";
-                  englishTextareaRef.current.style.height =
-                    Math.min(englishTextareaRef.current.scrollHeight, maxHeight) + "px";
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Translation error:", error);
-          } finally {
-            setIsTranslating(false);
-            translationTimeoutRef.current = null;
-          }
-        }, 800); // 800ms debounce
-      }
-    } else if (!newText.trim()) {
-      // Clear English text if Luo is empty
+    // Clear English text if Luo is empty
+    if (!newText.trim()) {
       setEnglishMessage("");
-      setIsTranslating(false);
       if (translationTimeoutRef.current) {
         clearTimeout(translationTimeoutRef.current);
         translationTimeoutRef.current = null;
@@ -574,6 +548,149 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
                   />
                 </div>
 
+                {/* Translation button in the middle */}
+                <div className="flex flex-col justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (englishMessage.trim()) {
+                        // Translate English to Luo
+                        setIsTranslating(true);
+                        try {
+                          toast({
+                            title: "Translating...",
+                            description: "English to Luo translation in progress",
+                          });
+
+                          const response = await fetch('/api/translate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              text: englishMessage,
+                              sourceLanguage: 'eng',
+                              targetLanguage: 'luo'
+                            })
+                          });
+
+                          if (response.ok) {
+                            const data = await response.json();
+                            console.log("Translation result:", data);
+
+                            if (data.translatedText) {
+                              setLuoMessage(data.translatedText);
+
+                              toast({
+                                title: "Translation Complete",
+                                description: `"${englishMessage}" → "${data.translatedText}"`,
+                              });
+
+                              // Resize the Luo textarea
+                              if (luoTextareaRef.current) {
+                                luoTextareaRef.current.style.height = "auto";
+                                luoTextareaRef.current.style.height =
+                                  Math.min(luoTextareaRef.current.scrollHeight, 200) + "px";
+                              }
+                            }
+                          } else {
+                            toast({
+                              title: "Translation Failed",
+                              description: "Could not translate text. Please try again.",
+                              variant: "destructive"
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Translation error:", error);
+                          toast({
+                            title: "Translation Error",
+                            description: "An error occurred during translation",
+                            variant: "destructive"
+                          });
+                        } finally {
+                          setIsTranslating(false);
+                        }
+                      } else if (luoMessage.trim()) {
+                        // Translate Luo to English
+                        setIsTranslating(true);
+                        try {
+                          toast({
+                            title: "Translating...",
+                            description: "Luo to English translation in progress",
+                          });
+
+                          const response = await fetch('/api/translate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              text: luoMessage,
+                              sourceLanguage: 'luo',
+                              targetLanguage: 'eng'
+                            })
+                          });
+
+                          if (response.ok) {
+                            const data = await response.json();
+                            console.log("Translation result:", data);
+
+                            if (data.translatedText) {
+                              setEnglishMessage(data.translatedText);
+
+                              toast({
+                                title: "Translation Complete",
+                                description: `"${luoMessage}" → "${data.translatedText}"`,
+                              });
+
+                              // Resize the English textarea
+                              if (englishTextareaRef.current) {
+                                englishTextareaRef.current.style.height = "auto";
+                                englishTextareaRef.current.style.height =
+                                  Math.min(englishTextareaRef.current.scrollHeight, 200) + "px";
+                              }
+                            }
+                          } else {
+                            toast({
+                              title: "Translation Failed",
+                              description: "Could not translate text. Please try again.",
+                              variant: "destructive"
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Translation error:", error);
+                          toast({
+                            title: "Translation Error",
+                            description: "An error occurred during translation",
+                            variant: "destructive"
+                          });
+                        } finally {
+                          setIsTranslating(false);
+                        }
+                      }
+                    }}
+                    className="px-2 py-1 flex items-center justify-center gap-1"
+                    disabled={isTranslating || (!englishMessage.trim() && !luoMessage.trim())}
+                    title="Translate"
+                  >
+                    {isTranslating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Translating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m5 8 6 6" />
+                          <path d="m4 14 6-6 2-3" />
+                          <path d="M2 5h12" />
+                          <path d="M7 2h1" />
+                          <path d="m22 22-5-10-5 10" />
+                          <path d="M14 18h6" />
+                        </svg>
+                        <span>Translate</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
                 {/* Luo input */}
                 <div className="flex-1">
                   <Textarea
@@ -606,12 +723,32 @@ export function ChatInput({ conversationId, userId, language }: ChatInputProps) 
               </div>
 
               {/* Translation status indicator */}
-              {isTranslating && (
-                <div className="text-xs text-center text-gray-400 mt-1 select-none">
-                  <Loader2 className="h-3 w-3 inline-block mr-1 animate-spin" />
-                  Translating...
-                </div>
-              )}
+              <div className={`text-xs text-center mt-2 py-1 px-2 rounded-md select-none ${
+                isTranslating
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+              }`}>
+                {isTranslating ? (
+                  <span className="flex items-center justify-center">
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Translating...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                      <path d="m5 8 6 6" />
+                      <path d="m4 14 6-6 2-3" />
+                      <path d="M2 5h12" />
+                      <path d="M7 2h1" />
+                      <path d="m22 22-5-10-5 10" />
+                      <path d="M14 18h6" />
+                    </svg>
+                    {englishMessage || luoMessage
+                      ? "Click 'Translate' to translate your text"
+                      : "Type in either language and click 'Translate'"}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Bottom toolbar on mobile */}
