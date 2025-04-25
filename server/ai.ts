@@ -1,22 +1,20 @@
 import { storage } from "./storage";
-import { generateResponse, translateWithGemini, getLanguageInsights } from "./gemini";
+import { translateToLuo, translateFromLuo } from "./luo-model";
 
-// This function generates AI responses and integrates with Gemini
+// This function generates AI responses for Luo language
 export async function sendAiResponse(message: string, language: string): Promise<string> {
   try {
-    // Get API key from storage
-    const apiKey = await storage.getApiKeyByProvider("gemini");
-    const actualApiKey = process.env.GEMINI_API_KEY || (apiKey?.keyValue || "");
-    
-    if (!actualApiKey) {
-      console.warn("No API key found for Gemini. Using fallback responses.");
-      return getFallbackResponse(message, language);
+    // For Luo language, we'll translate the message to Luo
+    if (language === "luo" && message) {
+      const translatedMessage = await translateToLuo(message);
+      return translatedMessage;
+    } else if (language === "eng" && message) {
+      // For English, we'll just return the message
+      return message;
     }
-    
-    // Use Gemini API for generating responses
-    const response = await generateResponse(message, language);
-    return response;
-    
+
+    // Default fallback
+    return getFallbackResponse(message, language);
   } catch (error) {
     console.error("Error generating AI response:", error);
     return "I'm sorry, I'm having trouble processing your request right now. Please try again later.";
@@ -26,19 +24,15 @@ export async function sendAiResponse(message: string, language: string): Promise
 // Function to translate text between languages
 export async function translateText(text: string, sourceLanguage: string, targetLanguage: string): Promise<string> {
   try {
-    // Get API key from storage
-    const apiKey = await storage.getApiKeyByProvider("gemini");
-    const actualApiKey = process.env.GEMINI_API_KEY || (apiKey?.keyValue || "");
-    
-    if (!actualApiKey) {
-      console.warn("No API key found for Gemini. Using fallback for translation.");
-      return `[Translation not available: ${text}]`;
+    // For Luo language translation, use our specialized model
+    if (sourceLanguage === "eng" && targetLanguage === "luo") {
+      return await translateToLuo(text);
+    } else if (sourceLanguage === "luo" && targetLanguage === "eng") {
+      return await translateFromLuo(text);
     }
-    
-    // Use Gemini API for translation
-    const translatedText = await translateWithGemini(text, sourceLanguage, targetLanguage);
-    return translatedText;
-    
+
+    // For unsupported language pairs, return a message
+    return `[Translation not available for ${sourceLanguage} to ${targetLanguage}]`;
   } catch (error) {
     console.error("Error translating text:", error);
     return `[Translation error: ${error.message}]`;
@@ -47,83 +41,62 @@ export async function translateText(text: string, sourceLanguage: string, target
 
 // Function to get language insights and cultural context
 export async function getLinguisticInsights(text: string, language: string): Promise<any> {
-  try {
-    // Get API key from storage
-    const apiKey = await storage.getApiKeyByProvider("gemini");
-    const actualApiKey = process.env.GEMINI_API_KEY || (apiKey?.keyValue || "");
-    
-    if (!actualApiKey) {
-      console.warn("No API key found for Gemini. Using fallback for insights.");
-      return {
-        culturalContext: "Cultural context information not available.",
-        keyPhrases: [],
-        pronunciation: "Pronunciation guide not available."
-      };
-    }
-    
-    // Use Gemini API for linguistic insights
-    const insights = await getLanguageInsights(text, language);
-    return insights;
-    
-  } catch (error) {
-    console.error("Error getting linguistic insights:", error);
+  // For now, we'll return basic information about Luo language
+  if (language === "luo") {
     return {
-      culturalContext: "An error occurred while retrieving cultural context.",
-      keyPhrases: [],
-      pronunciation: "An error occurred while retrieving pronunciation guide."
+      culturalContext: "The Luo people are a Nilotic ethnic group native to western Kenya and northern Tanzania.",
+      keyPhrases: ["Misawa (Hello)", "Idhi nade? (How are you?)", "Aber (I'm fine)", "Erokamano (Thank you)"],
+      pronunciation: "Luo is a tonal language with distinct vowel sounds."
     };
   }
+
+  // Default response
+  return {
+    culturalContext: "Cultural context information not available for this language.",
+    keyPhrases: [],
+    pronunciation: "Pronunciation guide not available for this language."
+  };
 }
 
 // Fallback responses for when the API is not available or during development
 function getFallbackResponse(message: string, language: string): string {
   const lowercaseMessage = message.toLowerCase();
-  
+
   // Basic greeting detection
-  if (lowercaseMessage.includes("hello") || 
-      lowercaseMessage.includes("hi") || 
+  if (lowercaseMessage.includes("hello") ||
+      lowercaseMessage.includes("hi") ||
       lowercaseMessage.includes("greetings")) {
-    
-    if (language === "mas") {
-      return "Sopa! (Hello in Maasai) How can I assist you today with Maasai language?";
-    } else if (language === "swa") {
-      return "Habari! (Hello in Kiswahili) How can I assist you today with Kiswahili language?";
-    } else if (language === "kik") {
-      return "Nĩatia! (Hello in Kikuyu) How can I assist you today with Kikuyu language?";
+
+    if (language === "luo") {
+      return "Misawa! (Hello in Luo/Dholuo) How can I assist you today with Luo language?";
     } else {
       return "Hello! How can I assist you today?";
     }
   }
-  
+
   // Translation request detection
-  if (lowercaseMessage.includes("translate") || 
+  if (lowercaseMessage.includes("translate") ||
       lowercaseMessage.includes("how do you say")) {
-    
-    if (language === "mas") {
-      return "In Maasai, common phrases include:\n- Sopa - Hello\n- Kaa eeta? - How are you?\n- Epa - Good\n- Ashe - Thank you\n\nWould you like to learn more specific Maasai phrases?";
-    } else if (language === "swa") {
-      return "In Kiswahili, common phrases include:\n- Habari - Hello\n- Habari yako? - How are you?\n- Nzuri - Good\n- Asante - Thank you\n\nWould you like to learn more specific Kiswahili phrases?";
-    } else if (language === "kik") {
-      return "In Kikuyu, common phrases include:\n- Nĩatia - Hello\n- Ūhoro waku? - How are you?\n- Nĩ mwega - Good\n- Nĩ ngatho - Thank you\n\nWould you like to learn more specific Kikuyu phrases?";
+
+    if (language === "luo") {
+      return "In Luo (Dholuo), common phrases include:\n- Misawa - Hello\n- Idhi nade? - How are you?\n- Aber - I'm fine\n- Erokamano - Thank you\n\nWould you like to learn more specific Luo phrases?";
     } else {
-      return "I can help you translate between various Kenyan languages. Please specify which language you'd like to translate to or from.";
+      return "I can help you translate between English and Luo (Dholuo). What would you like to translate?";
     }
   }
-  
+
   // Cultural information request
-  if (lowercaseMessage.includes("culture") || 
-      lowercaseMessage.includes("tradition") || 
+  if (lowercaseMessage.includes("culture") ||
+      lowercaseMessage.includes("tradition") ||
       lowercaseMessage.includes("custom")) {
-    
-    if (language === "mas") {
-      return "Maasai culture is rich in traditions. The Maasai are known for their distinctive customs, dress, and social organization. They are semi-nomadic people located primarily in Kenya and Tanzania. Their traditional lifestyle centers around their cattle, which are their primary source of food and measure of wealth. Would you like to know more about specific aspects of Maasai culture?";
-    } else if (language === "swa") {
-      return "Swahili culture blends African, Arab, Persian, and Indian influences. It developed along the East African coast, with traditions centered around community, respect for elders, and hospitality. Would you like to know more about specific aspects of Swahili culture?";
+
+    if (language === "luo") {
+      return "Luo culture is rich in traditions. The Luo people are a Nilotic ethnic group native to western Kenya and northern Tanzania. They have a strong musical tradition and are known for their storytelling, dance, and fishing culture. Their traditional social structure is organized around kinship, with respect for elders being a central value. Would you like to know more about specific aspects of Luo culture?";
     } else {
-      return "Kenya has over 40 ethnic groups, each with its own unique culture and traditions. Is there a specific Kenyan culture you'd like to learn more about?";
+      return "The Luo people have a rich cultural heritage with unique traditions and customs. Is there a specific aspect of Luo culture you'd like to learn more about?";
     }
   }
-  
+
   // Default response
-  return "I'm here to help you learn about Kenyan languages, particularly Maasai, Kiswahili, and others. You can ask me to translate phrases, teach you about cultural contexts, or provide language learning resources. What would you like to know?";
+  return "I'm here to help you learn about the Luo (Dholuo) language. You can ask me to translate phrases, teach you about cultural contexts, or provide language learning resources. What would you like to know?";
 }

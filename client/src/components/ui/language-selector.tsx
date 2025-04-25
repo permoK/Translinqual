@@ -24,12 +24,18 @@ export function LanguageSelector({ selectedLanguage, onLanguageChange }: Languag
     queryFn: getLanguages
   });
 
-  // Group languages by region
-  const kenyanLanguages = languages.filter(lang => lang.region === "Kenya" && lang.isActive);
-  const otherLanguages = languages.filter(lang => (lang.region !== "Kenya" || !lang.region) && lang.isActive);
-
   // Find the selected language name
-  const selectedLanguageName = languages.find(lang => lang.code === selectedLanguage)?.name || "Select language";
+  const selectedLanguageName = languages.find(lang => lang.code === selectedLanguage)?.name || "Luo (Dholuo)";
+
+  // Default to Luo if no language is selected
+  useEffect(() => {
+    if (languages.length > 0 && !selectedLanguage) {
+      const luoLanguage = languages.find(lang => lang.code === "luo");
+      if (luoLanguage) {
+        onLanguageChange(luoLanguage.code);
+      }
+    }
+  }, [languages, selectedLanguage, onLanguageChange]);
 
   return (
     <DropdownMenu>
@@ -47,25 +53,9 @@ export function LanguageSelector({ selectedLanguage, onLanguageChange }: Languag
           <DropdownMenuItem disabled>Loading languages...</DropdownMenuItem>
         ) : (
           <>
-            <DropdownMenuLabel>Kenyan Languages</DropdownMenuLabel>
-            {kenyanLanguages.map((language) => (
-              <DropdownMenuItem 
-                key={language.code}
-                onClick={() => onLanguageChange(language.code)}
-                className="flex items-center justify-between"
-              >
-                <span>{language.name}</span>
-                {selectedLanguage === language.code && (
-                  <Check className="h-4 w-4 text-primary" />
-                )}
-              </DropdownMenuItem>
-            ))}
-            
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuLabel>Other Languages</DropdownMenuLabel>
-            {otherLanguages.map((language) => (
-              <DropdownMenuItem 
+            <DropdownMenuLabel>Available Languages</DropdownMenuLabel>
+            {languages.map((language) => (
+              <DropdownMenuItem
                 key={language.code}
                 onClick={() => onLanguageChange(language.code)}
                 className="flex items-center justify-between"

@@ -4,6 +4,10 @@ import { setupVite, serveStatic, log } from "./vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,7 +65,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     // In production, serve static files from the dist/public directory
     const publicPath = path.resolve(__dirname, "..", "dist", "public");
     app.use(express.static(publicPath));
-    
+
     // Serve index.html for all routes that don't match a file
     app.get("*", (_req: Request, res: Response) => {
       res.sendFile(path.resolve(publicPath, "index.html"));

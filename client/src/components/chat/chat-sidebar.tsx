@@ -33,7 +33,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [newChatTitle, setNewChatTitle] = useState("");
   const [editConversation, setEditConversation] = useState<Conversation | null>(null);
-  const [selectedLanguage, setSelectedLanguage] = useState("mas"); // Default to Maasai
+  const [selectedLanguage, setSelectedLanguage] = useState("luo"); // Default to Luo
   const { toast } = useToast();
 
   const { data: conversations = [], isLoading, error } = useQuery({
@@ -61,7 +61,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   });
 
   const renameMutation = useMutation({
-    mutationFn: ({ id, title }: { id: number; title: string }) => 
+    mutationFn: ({ id, title }: { id: number; title: string }) =>
       updateConversation(id, { title }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
@@ -84,14 +84,14 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   const handleDeleteConversation = (e: React.MouseEvent, conversationId: number) => {
     e.preventDefault(); // Prevent navigation to conversation
     e.stopPropagation(); // Prevent event bubbling
-    
+
     deleteMutation.mutate(conversationId);
   };
 
   const handleRenameConversation = (e: React.MouseEvent, conversation: Conversation) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setEditConversation(conversation);
     setNewChatTitle(conversation.title);
     setIsRenameDialogOpen(true);
@@ -108,8 +108,8 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
       return;
     }
 
-    renameMutation.mutate({ 
-      id: editConversation.id, 
+    renameMutation.mutate({
+      id: editConversation.id,
       title: newChatTitle
     });
   };
@@ -117,11 +117,11 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   const handleShareConversation = (e: React.MouseEvent, conversationId: number) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Copy the conversation URL to clipboard
     const url = `${window.location.origin}/chat/${conversationId}`;
     navigator.clipboard.writeText(url);
-    
+
     toast({
       title: "Link copied",
       description: "Conversation link copied to clipboard",
@@ -131,7 +131,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   const handleExportConversation = (e: React.MouseEvent, conversationId: number) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     toast({
       title: "Coming soon",
       description: "Export functionality will be available in a future update",
@@ -153,14 +153,14 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
         title: newChatTitle,
         language: selectedLanguage
       });
-      
+
       // Update cache
       queryClient.invalidateQueries({ queryKey: ['/api/conversations'] });
-      
+
       // Reset form
       setNewChatTitle("");
       setIsNewChatDialogOpen(false);
-      
+
       // Navigate to the new conversation
       window.location.href = `/chat/${newConversation.id}`;
     } catch (error) {
@@ -173,7 +173,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   };
 
   // Filter conversations based on search term
-  const filteredConversations = conversations.filter(conversation => 
+  const filteredConversations = conversations.filter(conversation =>
     conversation.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -181,52 +181,38 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    
+
     return date.toLocaleDateString();
   };
 
   const getLanguageIcon = (language: string) => {
     switch (language) {
-      case 'mas':
+      case 'luo':
         return (
-          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white">
+          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+              <path d="m2 12 20 0"></path>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+          </div>
+        );
+      case 'eng':
+        return (
+          <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
           </div>
         );
-      case 'swa':
-        return (
-          <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-              <path d="m5 8 6 6"></path>
-              <path d="m4 14 6-6 2-3"></path>
-              <path d="M2 5h12"></path>
-              <path d="M7 2h1"></path>
-              <path d="m22 22-5-5"></path>
-              <path d="M17 8V7"></path>
-              <path d="M22 8h-1"></path>
-              <path d="M22 17v-1"></path>
-              <path d="M14 22h1"></path>
-            </svg>
-          </div>
-        );
-      case 'kik':
-        return (
-          <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
-            </svg>
-          </div>
-        );
       default:
         return (
-          <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white">
+          <div className="w-12 h-12 rounded-full bg-gray-500 flex items-center justify-center text-white">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
               <circle cx="12" cy="12" r="10"></circle>
               <path d="M2 12h20"></path>
@@ -256,7 +242,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
             <X className="h-6 w-6" />
           </Button>
         )}
-      
+
         <div className="p-4 border-b dark:border-gray-800">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -269,13 +255,13 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
             />
           </div>
         </div>
-        
+
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto p-2">
           <h3 className="font-medium text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider px-2 py-2">
             Recent Conversations
           </h3>
-          
+
           {isLoading ? (
             <div className="flex justify-center p-4">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -292,10 +278,10 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
             filteredConversations.map(conversation => (
               <div key={conversation.id} className="relative group">
                 <Link href={`/chat/${conversation.id}`}>
-                  <div 
+                  <div
                     className={`p-2 rounded-lg mb-1 cursor-pointer transition-colors group-hover:pr-10
-                      ${location === `/chat/${conversation.id}` 
-                        ? 'bg-primary bg-opacity-10' 
+                      ${location === `/chat/${conversation.id}`
+                        ? 'bg-primary bg-opacity-10'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                   >
                     <div className="flex items-center">
@@ -310,22 +296,21 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                          {conversation.language === 'mas' ? 'Maasai' :
-                           conversation.language === 'swa' ? 'Kiswahili' :
-                           conversation.language === 'kik' ? 'Kikuyu' : conversation.language}
+                          {conversation.language === 'luo' ? 'Luo (Dholuo)' :
+                           conversation.language === 'eng' ? 'English' : conversation.language}
                         </p>
                       </div>
                     </div>
                   </div>
                 </Link>
-                
+
                 {/* Dropdown Menu */}
                 <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                         onClick={(e) => e.preventDefault()}
                       >
@@ -333,21 +318,21 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="cursor-pointer flex items-center"
                         onClick={(e) => handleRenameConversation(e, conversation)}
                       >
                         <Edit className="mr-2 h-4 w-4" />
                         <span>Rename</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="cursor-pointer flex items-center"
                         onClick={(e) => handleShareConversation(e, conversation.id)}
                       >
                         <Share className="mr-2 h-4 w-4" />
                         <span>Share</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="cursor-pointer flex items-center"
                         onClick={(e) => handleExportConversation(e, conversation.id)}
                       >
@@ -355,7 +340,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
                         <span>Export</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="cursor-pointer text-red-500 flex items-center"
                         onClick={(e) => handleDeleteConversation(e, conversation.id)}
                       >
@@ -369,7 +354,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
             ))
           )}
         </div>
-        
+
         {/* New Chat Button */}
         <div className="p-4 border-t dark:border-gray-800">
           <Dialog open={isNewChatDialogOpen} onOpenChange={setIsNewChatDialogOpen}>
@@ -388,7 +373,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
                   <Label htmlFor="title">Conversation Title</Label>
                   <Input
                     id="title"
-                    placeholder="E.g., Maasai Language Practice"
+                    placeholder="E.g., Luo Language Practice"
                     value={newChatTitle}
                     onChange={(e) => setNewChatTitle(e.target.value)}
                   />
@@ -413,7 +398,7 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
           </Dialog>
         </div>
       </aside>
-      
+
       {/* Rename Dialog */}
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
         <DialogContent>
@@ -452,11 +437,11 @@ export function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Backdrop for mobile */}
       {isOpen !== undefined && isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden" 
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
           onClick={onClose}
         />
       )}
